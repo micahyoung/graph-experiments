@@ -134,65 +134,65 @@ SELECT ?a ?b WHERE { ?a family:neighborOf ?b . FILTER NOT EXISTS { ?b family:nei
 
 ---
 
-## Phase 3: Apply Extended Dataset
+## Phase 3: Iterative Extension
 
-### Upload Extended Data
+### Extension Steps
 
-Create an `extended-family.ttl` file with additional characters (e.g., grandparents, in-laws, neighbors, friends) following the same schema. Then upload:
+For each new dataset you want to add:
+
+1. **Create** a new TTL file (e.g., `extended-family.ttl`, `celebrity-cameos.ttl`)
+2. **Upload** the file:
 
 ```bash
 curl -s -u admin:$FUSEKI_PASSWORD -X POST "http://localhost:3030/ds-rw/data" \
-  --form "file=@extended-family.ttl"
+  --form "file=@<your-file>.ttl"
 ```
 
-### Audit
-
-Run the audit queries from Phase 2. You will likely find violations:
-
-- Parent/parentOf: Some parent relationships may be missing reciprocals
-- Spouse: Some spouse relationships may be one-directional
-- Sibling: Some sibling relationships may be incomplete
-- NeighborOf: Neighbor relationships may be missing reciprocals
-
-### Apply Corrections
-
-Create a `corrections.ttl` file that adds the missing reciprocal relationships. For example:
+3. **Audit** by running all reciprocity queries from Phase 2
+4. **If violations found**, create a corrections file:
 
 ```turtle
 @prefix family: <http://example.org/family#> .
 
-# Add missing parent relationships
-<http://example.org/person/child> family:parent <http://example.org/person/parent> .
-
-# Add missing sibling relationships
-<http://example.org/person/sibling1> family:sibling <http://example.org/person/sibling2> .
-
-# Add missing neighborOf relationships
-<http://example.org/person/neighbor1> family:neighborOf <http://example.org/person/neighbor2> .
+# For each violation (A rel B without B rel-inverse A):
+<A> family:rel-inverse <B> .
 ```
 
-Upload:
+5. **Upload corrections**:
 
 ```bash
 curl -s -u admin:$FUSEKI_PASSWORD -X POST "http://localhost:3030/ds-rw/data" \
   --form "file=@corrections.ttl"
 ```
 
-### Verify
+6. **Verify** all audit queries return empty results (`"bindings": []`)
 
-Re-run all audit queries. All should return empty results.
+### Example Violation Patterns
 
-### Final State
+When audit queries return results like:
+```json
+{"a": {"value": "http://example.org/person/A"}, "b": {"value": "http://example.org/person/B"}}
+```
+
+Add the reciprocal:
+```turtle
+<http://example.org/person/B> family:rel-inverse <http://example.org/person/A> .
+```
+
+---
+
+## Final Verification
+
+### Check Total Triple Count
 
 ```bash
 curl -s -u admin:$FUSEKI_PASSWORD "http://localhost:3030/ds-rw/sparql" \
   --data-urlencode 'query=SELECT (COUNT(*) as ?n) WHERE { ?s ?p ?o }'
 ```
 
-Expected: ~150-200 triples (varies based on data)
+### Success Criteria
 
-**Success criteria:**
-- ✅ All audit queries return empty results
+- ✅ All audit queries return empty results (`"bindings": []`)
 - ✅ All relationship invariants are satisfied
 - ✅ Graph is internally consistent
 
@@ -209,7 +209,8 @@ rm -f *.ttl
 
 ## Notes
 
-- The data files (`simpsons.ttl`, `extended-family.ttl`, `corrections.ttl`) are **examples** demonstrating the process
-- You can create your own data with different characters and relationships
-- The key is maintaining the **invariants** through the **audit → correct → verify** cycle
+- The **extension pattern** (create → upload → audit → correct → verify) is the core workflow
+- You can create your own data files with different characters and relationships
+- The key is maintaining the **invariants** through the audit cycle
 - Exact triple counts will vary based on your specific data
+- Each extension phase follows the same pattern regardless of content
