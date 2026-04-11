@@ -1,6 +1,6 @@
 # Fuseki Setup - Reproducible Guide
 
-This guide documents the exact steps to set up a Fuseki instance with Simpsons family RDF data.
+This guide documents the process for setting up a Fuseki instance with RDF data and maintaining data quality through iterative extension.
 
 ## Prerequisites
 - Docker installed and running
@@ -9,23 +9,21 @@ This guide documents the exact steps to set up a Fuseki instance with Simpsons f
 ## Quick Start
 
 ```bash
-# Pull image, start container, and extract password
 docker pull secoresearch/fuseki
 docker run -d -p 3030:3030 --name fuseki secoresearch/fuseki
 sleep 2
 export FUSEKI_PASSWORD=$(docker logs fuseki 2>&1 | grep "admin=" | cut -d= -f2)
-echo "Password: $FUSEKI_PASSWORD"
 ```
 
-Then use `$FUSEKI_PASSWORD` in all subsequent curl commands.
+Use `$FUSEKI_PASSWORD` in subsequent curl commands.
 
 ---
 
-## Steps
+## Phase 1: Initial Setup
 
-### 1. Create Core Family Data File
+### Create Core Data File
 
-Create `simpsons.ttl`:
+Create `simpsons.ttl` with core family members. This establishes the base schema and relationships:
 
 ```turtle
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
@@ -68,447 +66,150 @@ Create `simpsons.ttl`:
     family:sibling <http://example.org/person/bart>, <http://example.org/person/lisa> .
 ```
 
-### 2. Create Read-Write Dataset via API
+### Create Dataset
 
 ```bash
 curl -s -u admin:$FUSEKI_PASSWORD -X POST "http://localhost:3030/$/datasets?dbType=tdb2&dbName=ds-rw"
 ```
 
-This creates a TDB2 dataset named `ds-rw` with all default services (read/write graph store, SPARQL query/update).
-
-### 3. Upload Core Family Data
+### Upload and Verify
 
 ```bash
 curl -s -u admin:$FUSEKI_PASSWORD -X POST "http://localhost:3030/ds-rw/data" \
   --form "file=@simpsons.ttl"
 ```
 
-Expected response (example):
-```json
-{ "count" : 40 , "tripleCount" : 40 , "quadCount" : 0 }
-```
-
-Note: Exact counts depend on the data file content.
-
-### 4. Verify Core Data Upload
-
-```bash
-curl -s -u admin:$FUSEKI_PASSWORD "http://localhost:3030/ds-rw/sparql" \
-  --data-urlencode 'query=PREFIX foaf: <http://xmlns.com/foaf/0.1/>
-PREFIX family: <http://example.org/family#>
-
-SELECT ?person ?name ?age
-WHERE {
-  ?person a foaf:Person ;
-          foaf:name ?name ;
-          foaf:age ?age .
-}
-ORDER BY ?name'
-```
-
-## Expected Results (Step 6)
-
-Query returns 5 persons:
-- Bart Simpson (age 10)
-- Homer Simpson (age 45)
-- Lisa Simpson (age 8)
-- Maggie Simpson (age 1)
-- Marge Simpson (age 43)
-
-Total: 40 triples uploaded
+Expected: `{"count": 40, "tripleCount": 40, "quadCount": 0}`
 
 ---
 
-## Extended Family Setup
+## Phase 2: Extension Pattern
 
-### 5. Create Extended Family Data File
+### Goal
 
-Create `extended-family.ttl`:
+Extend the graph with additional data while maintaining data quality invariants.
 
-```turtle
-@prefix foaf: <http://xmlns.com/foaf/0.1/> .
-@prefix family: <http://example.org/family#> .
-@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+### Invariants
 
-# Homer's relatives
-<http://example.org/person/grandpa> a foaf:Person ;
-    foaf:name "Abraham Simpson" ;
-    foaf:age 84 ;
-    foaf:jobTitle "Retired" ;
-    family:parentOf <http://example.org/person/homer> ;
-    family:spouse <http://example.org/person/jacqueline> .
+After each extension, verify these relationship properties:
 
-<http://example.org/person/jacqueline> a foaf:Person ;
-    foaf:name "Jacqueline Bouvier" ;
-    foaf:age 82 ;
-    foaf:jobTitle "Retired" ;
-    family:parentOf <http://example.org/person/marge>, <http://example.org/person/patty>, <http://example.org/person/SELMA> ;
-    family:spouse <http://example.org/person/grandpa> .
+| Relationship | Property | Query |
+|--------------|----------|-------|
+| `parent` / `parentOf` | Reciprocal | If A `parentOf` B, then B `parent` A |
+| `spouse` | Reciprocal | If A `spouse` B, then B `spouse` A |
+| `sibling` | Reciprocal | If A `sibling` B, then B `sibling` A |
+| `neighborOf` | Reciprocal | If A `neighborOf` B, then B `neighborOf` A |
 
-<http://example.org/person/patty> a foaf:Person ;
-    foaf:name "Patty Bouvier" ;
-    foaf:age 48 ;
-    foaf:jobTitle "Teller" ;
-    family:parent <http://example.org/person/jacqueline> ;
-    family:sibling <http://example.org/person/marge>, <http://example.org/person/SELMA> ;
-    family:spouse <http://example.org/person/HERBERT> .
+### Audit Queries
 
-<http://example.org/person/SELMA> a foaf:Person ;
-    foaf:name "Selma Bouvier" ;
-    foaf:age 46 ;
-    foaf:jobTitle "Alcohol Abuse Counselor" ;
-    family:parent <http://example.org/person/jacqueline> ;
-    family:sibling <http://example.org/person/marge>, <http://example.org/person/patty> ;
-    family:spouse <http://example.org/person/lenny> ;
-    family:parentOf <http://example.org/person/rod>, <http://example.org/person/todd> .
+```bash
+# Parent/parentOf reciprocity
+curl -s -u admin:$FUSEKI_PASSWORD "http://localhost:3030/ds-rw/sparql" \
+  --data-urlencode 'query=PREFIX family: <http://example.org/family#>
+SELECT ?a ?b WHERE { ?a family:parentOf ?b . FILTER NOT EXISTS { ?b family:parent ?a } }'
 
-<http://example.org/person/HERBERT> a foaf:Person ;
-    foaf:name "Herbert Powell" ;
-    foaf:age 50 ;
-    foaf:jobTitle "Unemployed" ;
-    family:spouse <http://example.org/person/patty> .
+# Spouse reciprocity
+curl -s -u admin:$FUSEKI_PASSWORD "http://localhost:3030/ds-rw/sparql" \
+  --data-urlencode 'query=PREFIX family: <http://example.org/family#>
+SELECT ?a ?b WHERE { ?a family:spouse ?b . FILTER NOT EXISTS { ?b family:spouse ?a } }'
 
-# Ned Flanders family
-<http://example.org/person/ned> a foaf:Person ;
-    foaf:name "Ned Flanders" ;
-    foaf:age 45 ;
-    foaf:jobTitle "Minister" ;
-    family:neighborOf <http://example.org/person/homer> ;
-    family:spouse <http://example.org/person/marilyn> ;
-    family:parentOf <http://example.org/person/rod_f>, <http://example.org/person/todd_f> .
+# Sibling reciprocity
+curl -s -u admin:$FUSEKI_PASSWORD "http://localhost:3030/ds-rw/sparql" \
+  --data-urlencode 'query=PREFIX family: <http://example.org/family#>
+SELECT ?a ?b WHERE { ?a family:sibling ?b . FILTER NOT EXISTS { ?b family:sibling ?a } }'
 
-<http://example.org/person/marilyn> a foaf:Person ;
-    foaf:name "Marilyn Flanders" ;
-    foaf:age 43 ;
-    foaf:jobTitle "Homemaker" ;
-    family:spouse <http://example.org/person/ned> ;
-    family:parentOf <http://example.org/person/rod_f>, <http://example.org/person/todd_f> .
-
-<http://example.org/person/rod_f> a foaf:Person ;
-    foaf:name "Rod Flanders" ;
-    foaf:age 12 ;
-    foaf:jobTitle "Student" ;
-    family:parent <http://example.org/person/ned>, <http://example.org/person/marilyn> ;
-    family:sibling <http://example.org/person/todd_f> .
-
-<http://example.org/person/todd_f> a foaf:Person ;
-    foaf:name "Todd Flanders" ;
-    foaf:age 9 ;
-    foaf:jobTitle "Student" ;
-    family:parent <http://example.org/person/ned>, <http://example.org/person/marilyn> ;
-    family:sibling <http://example.org/person/rod_f> .
-
-# Moe
-<http://example.org/person/moe> a foaf:Person ;
-    foaf:name "Moe Szyslak" ;
-    foaf:age 48 ;
-    foaf:jobTitle "Bar Owner" ;
-    family:friendOf <http://example.org/person/homer> .
-
-# Lenny and Carl
-<http://example.org/person/lenny> a foaf:Person ;
-    foaf:name "Lenny Leonard" ;
-    foaf:age 44 ;
-    foaf:jobTitle "Nuclear Plant Worker" ;
-    family:colleagueOf <http://example.org/person/homer>, <http://example.org/person/carl> ;
-    family:spouse <http://example.org/person/SELMA> ;
-    family:parentOf <http://example.org/person/rod>, <http://example.org/person/todd> .
-
-<http://example.org/person/carl> a foaf:Person ;
-    foaf:name "Carl Carlson" ;
-    foaf:age 46 ;
-    foaf:jobTitle "Nuclear Plant Worker" ;
-    family:colleagueOf <http://example.org/person/homer>, <http://example.org/person/lenny> ;
-    family:spouse <http://example.org/person/louise> ;
-    family:parentOf <http://example.org/person/edna> .
-
-<http://example.org/person/louise> a foaf:Person ;
-    foaf:name "Louise Carlson" ;
-    foaf:age 44 ;
-    foaf:jobTitle "Teacher" ;
-    family:spouse <http://example.org/person/carl> ;
-    family:parentOf <http://example.org/person/edna> .
-
-# Selma and Lenny's children (Leonards, not Flanders)
-<http://example.org/person/rod> a foaf:Person ;
-    foaf:name "Rod Leonard" ;
-    foaf:age 14 ;
-    foaf:jobTitle "Student" ;
-    family:parent <http://example.org/person/SELMA>, <http://example.org/person/lenny> ;
-    family:sibling <http://example.org/person/todd> .
-
-<http://example.org/person/todd> a foaf:Person ;
-    foaf:name "Todd Leonard" ;
-    foaf:age 12 ;
-    foaf:jobTitle "Student" ;
-    family:parent <http://example.org/person/SELMA>, <http://example.org/person/lenny> ;
-    family:sibling <http://example.org/person/rod> .
-
-# Carl and Louise's child
-<http://example.org/person/edna> a foaf:Person ;
-    foaf:name "Edna Carlson" ;
-    foaf:age 6 ;
-    foaf:jobTitle "Child" ;
-    family:parent <http://example.org/person/carl>, <http://example.org/person/louise> .
+# NeighborOf reciprocity
+curl -s -u admin:$FUSEKI_PASSWORD "http://localhost:3030/ds-rw/sparql" \
+  --data-urlencode 'query=PREFIX family: <http://example.org/family#>
+SELECT ?a ?b WHERE { ?a family:neighborOf ?b . FILTER NOT EXISTS { ?b family:neighborOf ?a } }'
 ```
 
-### 6. Upload Extended Family Data
+### Process
+
+1. **Create** a TTL file with new entities and relationships
+2. **Upload** via `curl -X POST .../ds-rw/data --form "file=@file.ttl"`
+3. **Audit** using the queries above
+4. **Correct** any violations by creating a corrections TTL file
+5. **Verify** all audit queries return empty results
+
+---
+
+## Phase 3: Apply Extended Dataset
+
+### Upload Extended Data
+
+Create an `extended-family.ttl` file with additional characters (e.g., grandparents, in-laws, neighbors, friends) following the same schema. Then upload:
 
 ```bash
 curl -s -u admin:$FUSEKI_PASSWORD -X POST "http://localhost:3030/ds-rw/data" \
   --form "file=@extended-family.ttl"
 ```
 
-Expected response (example):
-```json
-{ "count" : 114 , "tripleCount" : 114 , "quadCount" : 0 }
-```
+### Audit
 
-Total triples after this step: ~154 (adjusts based on data file content)
+Run the audit queries from Phase 2. You will likely find violations:
 
-### 7. Audit the Graph for Inconsistencies
+- Parent/parentOf: Some parent relationships may be missing reciprocals
+- Spouse: Some spouse relationships may be one-directional
+- Sibling: Some sibling relationships may be incomplete
+- NeighborOf: Neighbor relationships may be missing reciprocals
 
-Check for data inconsistencies:
+### Apply Corrections
 
-```bash
-# Check for missing parent relationships
-curl -s -u admin:$FUSEKI_PASSWORD "http://localhost:3030/ds-rw/sparql" \
-  --data-urlencode 'query=PREFIX family: <http://example.org/family#>
-SELECT ?parent ?child
-WHERE {
-  ?parent family:parentOf ?child .
-  FILTER NOT EXISTS { ?child family:parent ?parent }
-}'
-```
-
-Expected: Returns 2 rows (grandpa→homer, jacqueline→marge missing reciprocals)
-
-```bash
-# Check for non-reciprocal spouse relationships
-curl -s -u admin:$FUSEKI_PASSWORD "http://localhost:3030/ds-rw/sparql" \
-  --data-urlencode 'query=PREFIX family: <http://example.org/family#>
-SELECT ?person1 ?person2
-WHERE {
-  ?person1 family:spouse ?person2 .
-  FILTER NOT EXISTS { ?person2 family:spouse ?person1 }
-}'
-```
-
-Expected: Empty results (all spouse relationships are reciprocal)
-
-```bash
-# Check for non-reciprocal sibling relationships
-curl -s -u admin:$FUSEKI_PASSWORD "http://localhost:3030/ds-rw/sparql" \
-  --data-urlencode 'query=PREFIX family: <http://example.org/family#>
-SELECT ?person1 ?person2
-WHERE {
-  ?person1 family:sibling ?person2 .
-  FILTER NOT EXISTS { ?person2 family:sibling ?person1 }
-}'
-```
-
-Expected: Returns 2 rows (patty→marge, SELMA→marge missing reciprocals)
-
-### 8. Apply Corrections
-
-Create `corrections.ttl`:
+Create a `corrections.ttl` file that adds the missing reciprocal relationships. For example:
 
 ```turtle
-@prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix family: <http://example.org/family#> .
 
-# Fix 1: Add missing parent relationships
-<http://example.org/person/homer> family:parent <http://example.org/person/grandpa> .
-<http://example.org/person/marge> family:parent <http://example.org/person/jacqueline> .
+# Add missing parent relationships
+<http://example.org/person/child> family:parent <http://example.org/person/parent> .
 
-# Fix 2: Add missing sibling relationships (Marge should list her sisters)
-<http://example.org/person/marge> family:sibling <http://example.org/person/patty> .
-<http://example.org/person/marge> family:sibling <http://example.org/person/SELMA> .
+# Add missing sibling relationships
+<http://example.org/person/sibling1> family:sibling <http://example.org/person/sibling2> .
 
-# Fix 3: Make neighborOf reciprocal
-<http://example.org/person/homer> family:neighborOf <http://example.org/person/ned> .
+# Add missing neighborOf relationships
+<http://example.org/person/neighbor1> family:neighborOf <http://example.org/person/neighbor2> .
 ```
 
-Upload corrections:
+Upload:
 
 ```bash
 curl -s -u admin:$FUSEKI_PASSWORD -X POST "http://localhost:3030/ds-rw/data" \
   --form "file=@corrections.ttl"
 ```
 
-Expected response (example):
-```json
-{ "count" : 5 , "tripleCount" : 5 , "quadCount" : 0 }
-```
+### Verify
 
-Note: Count depends on corrections needed.
+Re-run all audit queries. All should return empty results.
 
-### 9. Verify Corrections
-
-```bash
-# Verify all parent relationships are consistent (should return empty)
-curl -s -u admin:$FUSEKI_PASSWORD "http://localhost:3030/ds-rw/sparql" \
-  --data-urlencode 'query=PREFIX family: <http://example.org/family#>
-SELECT ?parent ?child
-WHERE {
-  ?parent family:parentOf ?child .
-  FILTER NOT EXISTS { ?child family:parent ?parent }
-}'
-```
-
-```bash
-# Verify all sibling relationships are reciprocal (should return empty)
-curl -s -u admin:$FUSEKI_PASSWORD "http://localhost:3030/ds-rw/sparql" \
-  --data-urlencode 'query=PREFIX family: <http://example.org/family#>
-SELECT ?person1 ?person2
-WHERE {
-  ?person1 family:sibling ?person2 .
-  FILTER NOT EXISTS { ?person2 family:sibling ?person1 }
-}'
-```
-
-```bash
-# Verify all neighborOf relationships are reciprocal (should return empty)
-curl -s -u admin:$FUSEKI_PASSWORD "http://localhost:3030/ds-rw/sparql" \
-  --data-urlencode 'query=PREFIX family: <http://example.org/family#>
-SELECT ?person1 ?person2
-WHERE {
-  ?person1 family:neighborOf ?person2 .
-  FILTER NOT EXISTS { ?person2 family:neighborOf ?person1 }
-}'
-```
-
-```bash
-# Final count after corrections
-curl -s -u admin:$FUSEKI_PASSWORD "http://localhost:3030/ds-rw/sparql" \
-  --data-urlencode 'query=SELECT (COUNT(*) as ?totalTriples) WHERE { ?s ?p ?o }'
-```
-
-## Final Results (After Corrections)
-
-- **Total persons**: 21 (from core + extended family)
-- **Total triples**: ~159 (varies based on data and corrections)
-- **All parent/parentOf relationships**: Consistent
-- **All spouse relationships**: Reciprocal
-- **All sibling relationships**: Reciprocal
-- **All neighborOf relationships**: Reciprocal
-
-### Persons in Graph
-
-**Core Simpsons**: Homer, Marge, Bart, Lisa, Maggie
-
-**Extended Family**:
-- Abraham Simpson (Grandpa)
-- Jacqueline Bouvier (Marge's mother)
-- Patty Bouvier (Marge's sister)
-- Selma Bouvier (Marge's sister)
-- Herbert Powell (Patty's spouse)
-
-**Flanders Family**:
-- Ned Flanders (Homer's neighbor)
-- Marilyn Flanders
-- Rod Flanders (age 12)
-- Todd Flanders (age 9)
-
-**Friends & Colleagues**:
-- Moe Szyslak (Homer's friend)
-- Lenny Leonard (Homer's colleague)
-- Carl Carlson (Homer's colleague)
-- Louise Carlson (Carl's wife)
-
-**Children**:
-- Rod Leonard (age 14, Selma & Lenny's son)
-- Todd Leonard (age 12, Selma & Lenny's son)
-- Edna Carlson (age 6, Carl & Louise's daughter)
-
----
-
-## Extending with Additional Characters (Pattern)
-
-### Adding Cameo/Guest Characters
-
-To add guest celebrities or cameo characters, follow this pattern:
-
-1. **Create a new TTL file** (e.g., `celebrity-cameos.ttl`) using the `celeb:` namespace:
-
-```turtle
-@prefix foaf: <http://xmlns.com/foaf/0.1/> .
-@prefix family: <http://example.org/family#> .
-@prefix celeb: <http://example.org/celebrity#> .
-
-# Template for guest celebrity cameo
-<http://example.org/person/CELEBRITY_ID> a foaf:Person ;
-    foaf:name "Celebrity Name" ;
-    foaf:age AGE ;
-    foaf:jobTitle "Profession" ;
-    celeb:realWorldPerson "Real World Name" ;
-    family:friendOf <http://example.org/person/EXISTING_CHARACTER> .
-```
-
-2. **Upload the file**:
-
-```bash
-curl -s -u admin:$FUSEKI_PASSWORD -X POST "http://localhost:3030/ds-rw/data" \
-  --form "file=@celebrity-cameos.ttl"
-```
-
-3. **Query to verify**:
+### Final State
 
 ```bash
 curl -s -u admin:$FUSEKI_PASSWORD "http://localhost:3030/ds-rw/sparql" \
-  --data-urlencode 'query=PREFIX foaf: <http://xmlns.com/foaf/0.1/>
-PREFIX celeb: <http://example.org/celebrity#>
-
-SELECT ?name ?job
-WHERE {
-  ?person a foaf:Person ;
-          foaf:name ?name ;
-          foaf:jobTitle ?job ;
-          celeb:realWorldPerson ?realPerson .
-}
-ORDER BY ?name'
+  --data-urlencode 'query=SELECT (COUNT(*) as ?n) WHERE { ?s ?p ?o }'
 ```
 
-4. **Check total triple count**:
+Expected: ~150-200 triples (varies based on data)
 
-```bash
-curl -s -u admin:$FUSEKI_PASSWORD "http://localhost:3030/ds-rw/sparql" \
-  --data-urlencode 'query=SELECT (COUNT(*) as ?totalTriples) WHERE { ?s ?p ?o }'
-```
-
-### Example: Celebrity Cameos
-
-See `celebrity-cameos.ttl` in this repository for a working example with 10 celebrity guest characters.
-
-## Final Results
-
-- **Core family**: 5 persons (40 triples)
-- **Extended family**: 16 additional persons (~114 triples)
-- **Corrections**: 5 additional triples
-- **After corrections**: ~159 triples, 21 persons
-
-Add cameo characters as needed using the pattern above.
+**Success criteria:**
+- ✅ All audit queries return empty results
+- ✅ All relationship invariants are satisfied
+- ✅ Graph is internally consistent
 
 ---
 
 ## Cleanup
 
-To reset and start over:
-
 ```bash
-docker stop fuseki
-docker rm fuseki
+docker stop fuseki && docker rm fuseki
 rm -f *.ttl
 ```
 
 ---
 
-## Version History
+## Notes
 
-- **v1**: Manual UI-based setup (not reproducible)
-- **v2**: API-based setup with `<PASSWORD>` placeholder
-- **v3**: Added extended family data, audit, and corrections steps
-- **v4**: Automatic password extraction via `$FUSEKI_PASSWORD` variable
-- **v5**: Added wait step for container initialization
-- **v6**: Documented extension pattern instead of specific celebrity data
-- **v7 (current)**: Consolidated redundant steps into Quick Start, renumbered sequentially
+- The data files (`simpsons.ttl`, `extended-family.ttl`, `corrections.ttl`) are **examples** demonstrating the process
+- You can create your own data with different characters and relationships
+- The key is maintaining the **invariants** through the **audit → correct → verify** cycle
+- Exact triple counts will vary based on your specific data
