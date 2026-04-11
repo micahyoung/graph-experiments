@@ -9,10 +9,12 @@ This guide documents the exact steps to set up a Fuseki instance with Simpsons f
 ## Quick Start
 
 ```bash
-# Start container and extract password (waits for container to be ready)
+# Pull image, start container, and extract password
+docker pull secoresearch/fuseki
 docker run -d -p 3030:3030 --name fuseki secoresearch/fuseki
 sleep 2
 export FUSEKI_PASSWORD=$(docker logs fuseki 2>&1 | grep "admin=" | cut -d= -f2)
+echo "Password: $FUSEKI_PASSWORD"
 ```
 
 Then use `$FUSEKI_PASSWORD` in all subsequent curl commands.
@@ -21,22 +23,7 @@ Then use `$FUSEKI_PASSWORD` in all subsequent curl commands.
 
 ## Steps
 
-### 1. Pull and Start Fuseki Container
-
-```bash
-docker pull secoresearch/fuseki
-docker run -d -p 3030:3030 --name fuseki secoresearch/fuseki
-sleep 2  # Wait for container to initialize
-```
-
-### 2. Get Admin Password
-
-```bash
-export FUSEKI_PASSWORD=$(docker logs fuseki 2>&1 | grep "admin=" | cut -d= -f2)
-echo "Password: $FUSEKI_PASSWORD"
-```
-
-### 3. Create RDF Data File
+### 1. Create Core Family Data File
 
 Create `simpsons.ttl`:
 
@@ -81,7 +68,7 @@ Create `simpsons.ttl`:
     family:sibling <http://example.org/person/bart>, <http://example.org/person/lisa> .
 ```
 
-### 4. Create Read-Write Dataset via API
+### 2. Create Read-Write Dataset via API
 
 ```bash
 curl -s -u admin:$FUSEKI_PASSWORD -X POST "http://localhost:3030/$/datasets?dbType=tdb2&dbName=ds-rw"
@@ -89,7 +76,7 @@ curl -s -u admin:$FUSEKI_PASSWORD -X POST "http://localhost:3030/$/datasets?dbTy
 
 This creates a TDB2 dataset named `ds-rw` with all default services (read/write graph store, SPARQL query/update).
 
-### 5. Upload Data
+### 3. Upload Core Family Data
 
 ```bash
 curl -s -u admin:$FUSEKI_PASSWORD -X POST "http://localhost:3030/ds-rw/data" \
@@ -103,7 +90,7 @@ Expected response (example):
 
 Note: Exact counts depend on the data file content.
 
-### 6. Query the Data
+### 4. Verify Core Data Upload
 
 ```bash
 curl -s -u admin:$FUSEKI_PASSWORD "http://localhost:3030/ds-rw/sparql" \
@@ -134,7 +121,7 @@ Total: 40 triples uploaded
 
 ## Extended Family Setup
 
-### 7. Create Extended Family Data File
+### 5. Create Extended Family Data File
 
 Create `extended-family.ttl`:
 
@@ -265,7 +252,7 @@ Create `extended-family.ttl`:
     family:parent <http://example.org/person/carl>, <http://example.org/person/louise> .
 ```
 
-### 8. Upload Extended Family Data
+### 6. Upload Extended Family Data
 
 ```bash
 curl -s -u admin:$FUSEKI_PASSWORD -X POST "http://localhost:3030/ds-rw/data" \
@@ -279,7 +266,7 @@ Expected response (example):
 
 Total triples after this step: ~154 (adjusts based on data file content)
 
-### 9. Audit the Graph
+### 7. Audit the Graph for Inconsistencies
 
 Check for data inconsistencies:
 
@@ -322,7 +309,7 @@ WHERE {
 
 Expected: Returns 2 rows (patty→marge, SELMA→marge missing reciprocals)
 
-### 10. Apply Corrections
+### 8. Apply Corrections
 
 Create `corrections.ttl`:
 
@@ -356,7 +343,7 @@ Expected response (example):
 
 Note: Count depends on corrections needed.
 
-### 11. Verify Corrections
+### 9. Verify Corrections
 
 ```bash
 # Verify all parent relationships are consistent (should return empty)
@@ -523,4 +510,5 @@ rm -f *.ttl
 - **v3**: Added extended family data, audit, and corrections steps
 - **v4**: Automatic password extraction via `$FUSEKI_PASSWORD` variable
 - **v5**: Added wait step for container initialization
-- **v6 (current)**: Documented extension pattern instead of specific celebrity data
+- **v6**: Documented extension pattern instead of specific celebrity data
+- **v7 (current)**: Consolidated redundant steps into Quick Start, renumbered sequentially
