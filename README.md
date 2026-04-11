@@ -25,7 +25,7 @@
    > look at how PLAN.md has changed over time and reflect on your proposed changes. critique whether they are truly reproducible for the types of changes in past iterations, whether they align with the user's goals over your own implementation details, and avoid overfitting. Then correct them to be future-proof
 
 5. Use a coding agent Task to test with this prompt:
-   > test your changes by spinning up an Task providing it only these exact instructions: "implement the plan in PLAN.md"
+   > remove all changes except those in PLAN.md then test your changes by spinning up an Task providing it only these exact instructions: "implement the plan in PLAN.md"
 
 6. You and your coding agent should review the results and repeat any needed correction steps.
 
