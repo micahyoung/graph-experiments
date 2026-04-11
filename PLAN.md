@@ -9,7 +9,9 @@ This guide documents the exact steps to set up a Fuseki instance with Simpsons f
 ## Quick Start
 
 ```bash
-# Extract password automatically
+# Start container and extract password (waits for container to be ready)
+docker run -d -p 3030:3030 --name fuseki secoresearch/fuseki
+sleep 2
 export FUSEKI_PASSWORD=$(docker logs fuseki 2>&1 | grep "admin=" | cut -d= -f2)
 ```
 
@@ -24,19 +26,14 @@ Then use `$FUSEKI_PASSWORD` in all subsequent curl commands.
 ```bash
 docker pull secoresearch/fuseki
 docker run -d -p 3030:3030 --name fuseki secoresearch/fuseki
+sleep 2  # Wait for container to initialize
 ```
 
 ### 2. Get Admin Password
 
 ```bash
-docker logs fuseki 2>&1 | grep "admin="
-```
-
-Output will show: `admin=<random-password>`
-
-Set the password for subsequent commands:
-```bash
 export FUSEKI_PASSWORD=$(docker logs fuseki 2>&1 | grep "admin=" | cut -d= -f2)
+echo "Password: $FUSEKI_PASSWORD"
 ```
 
 ### 3. Create RDF Data File
@@ -99,10 +96,12 @@ curl -s -u admin:$FUSEKI_PASSWORD -X POST "http://localhost:3030/ds-rw/data" \
   --form "file=@simpsons.ttl"
 ```
 
-Expected response:
+Expected response (example):
 ```json
 { "count" : 40 , "tripleCount" : 40 , "quadCount" : 0 }
 ```
+
+Note: Exact counts depend on the data file content.
 
 ### 6. Query the Data
 
@@ -273,12 +272,12 @@ curl -s -u admin:$FUSEKI_PASSWORD -X POST "http://localhost:3030/ds-rw/data" \
   --form "file=@extended-family.ttl"
 ```
 
-Expected response:
+Expected response (example):
 ```json
 { "count" : 114 , "tripleCount" : 114 , "quadCount" : 0 }
 ```
 
-Total triples: 154 (40 + 114)
+Total triples after this step: ~154 (adjusts based on data file content)
 
 ### 9. Audit the Graph
 
@@ -350,10 +349,12 @@ curl -s -u admin:$FUSEKI_PASSWORD -X POST "http://localhost:3030/ds-rw/data" \
   --form "file=@corrections.ttl"
 ```
 
-Expected response:
+Expected response (example):
 ```json
 { "count" : 5 , "tripleCount" : 5 , "quadCount" : 0 }
 ```
+
+Note: Count depends on corrections needed.
 
 ### 11. Verify Corrections
 
@@ -391,15 +392,15 @@ WHERE {
 ```
 
 ```bash
-# Final count (should be 159 triples)
+# Final count after corrections
 curl -s -u admin:$FUSEKI_PASSWORD "http://localhost:3030/ds-rw/sparql" \
   --data-urlencode 'query=SELECT (COUNT(*) as ?totalTriples) WHERE { ?s ?p ?o }'
 ```
 
-## Final Results
+## Final Results (After Corrections)
 
-- **Total persons**: 21
-- **Total triples**: 159
+- **Total persons**: 21 (from core + extended family)
+- **Total triples**: ~159 (varies based on data and corrections)
 - **All parent/parentOf relationships**: Consistent
 - **All spouse relationships**: Reciprocal
 - **All sibling relationships**: Reciprocal
@@ -435,6 +436,74 @@ curl -s -u admin:$FUSEKI_PASSWORD "http://localhost:3030/ds-rw/sparql" \
 
 ---
 
+## Extending with Additional Characters (Pattern)
+
+### Adding Cameo/Guest Characters
+
+To add guest celebrities or cameo characters, follow this pattern:
+
+1. **Create a new TTL file** (e.g., `celebrity-cameos.ttl`) using the `celeb:` namespace:
+
+```turtle
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix family: <http://example.org/family#> .
+@prefix celeb: <http://example.org/celebrity#> .
+
+# Template for guest celebrity cameo
+<http://example.org/person/CELEBRITY_ID> a foaf:Person ;
+    foaf:name "Celebrity Name" ;
+    foaf:age AGE ;
+    foaf:jobTitle "Profession" ;
+    celeb:realWorldPerson "Real World Name" ;
+    family:friendOf <http://example.org/person/EXISTING_CHARACTER> .
+```
+
+2. **Upload the file**:
+
+```bash
+curl -s -u admin:$FUSEKI_PASSWORD -X POST "http://localhost:3030/ds-rw/data" \
+  --form "file=@celebrity-cameos.ttl"
+```
+
+3. **Query to verify**:
+
+```bash
+curl -s -u admin:$FUSEKI_PASSWORD "http://localhost:3030/ds-rw/sparql" \
+  --data-urlencode 'query=PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+PREFIX celeb: <http://example.org/celebrity#>
+
+SELECT ?name ?job
+WHERE {
+  ?person a foaf:Person ;
+          foaf:name ?name ;
+          foaf:jobTitle ?job ;
+          celeb:realWorldPerson ?realPerson .
+}
+ORDER BY ?name'
+```
+
+4. **Check total triple count**:
+
+```bash
+curl -s -u admin:$FUSEKI_PASSWORD "http://localhost:3030/ds-rw/sparql" \
+  --data-urlencode 'query=SELECT (COUNT(*) as ?totalTriples) WHERE { ?s ?p ?o }'
+```
+
+### Example: Celebrity Cameos
+
+See `celebrity-cameos.ttl` in this repository for a working example with 10 celebrity guest characters.
+
+## Final Results
+
+- **Core family**: 5 persons (40 triples)
+- **Extended family**: 16 additional persons (~114 triples)
+- **Corrections**: 5 additional triples
+- **After corrections**: ~159 triples, 21 persons
+
+Add cameo characters as needed using the pattern above.
+
+---
+
 ## Cleanup
 
 To reset and start over:
@@ -442,7 +511,7 @@ To reset and start over:
 ```bash
 docker stop fuseki
 docker rm fuseki
-rm -f simpsons.ttl extended-family.ttl corrections.ttl
+rm -f *.ttl
 ```
 
 ---
@@ -452,4 +521,6 @@ rm -f simpsons.ttl extended-family.ttl corrections.ttl
 - **v1**: Manual UI-based setup (not reproducible)
 - **v2**: API-based setup with `<PASSWORD>` placeholder
 - **v3**: Added extended family data, audit, and corrections steps
-- **v4 (current)**: Automatic password extraction via `$FUSEKI_PASSWORD` variable (truly reproducible)
+- **v4**: Automatic password extraction via `$FUSEKI_PASSWORD` variable
+- **v5**: Added wait step for container initialization
+- **v6 (current)**: Documented extension pattern instead of specific celebrity data
