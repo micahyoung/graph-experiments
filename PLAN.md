@@ -9,6 +9,7 @@
 ### 1. Pull and Start Fuseki Container
 
 ```bash
+docker pull secoresearch/fuseki
 docker run -d -p 3030:3030 --name fuseki secoresearch/fuseki
 ```
 
@@ -19,6 +20,8 @@ docker logs fuseki 2>&1 | grep "admin="
 ```
 
 Output will show: `admin=<random-password>`
+
+Note: Replace `<PASSWORD>` in subsequent commands with the actual password.
 
 ### 3. Create RDF Data File
 
@@ -65,32 +68,27 @@ Create `simpsons.ttl`:
     family:sibling <http://example.org/person/bart>, <http://example.org/person/lisa> .
 ```
 
-### 4. Access Fuseki UI
+### 4. Create Read-Write Dataset via API
 
-Navigate to: `http://admin:<PASSWORD>@localhost:3030/`
+```bash
+curl -s -u admin:<PASSWORD> -X POST "http://localhost:3030/$/datasets?dbType=tdb2&dbName=ds-rw"
+```
 
-### 5. Create Read-Write Dataset
+This creates a TDB2 dataset named `ds-rw` with all default services (read/write graph store, SPARQL query/update).
 
-1. Click "manage" in navigation
-2. Click "new dataset"
-3. Enter dataset name: `ds-rw`
-4. Enable services:
-   - Graph Store Protocol (read)
-   - Graph Store Protocol (write)
-   - SPARQL Query
-   - SPARQL Update
-5. Click "create"
+### 5. Upload Data
 
-### 6. Upload Data
+```bash
+curl -s -u admin:<PASSWORD> -X POST "http://localhost:3030/ds-rw/data" \
+  --form "file=@simpsons.ttl"
+```
 
-1. Navigate to: `http://admin:<PASSWORD>@localhost:3030/#/dataset/ds-rw/upload`
-2. Click "select files" and choose `simpsons.ttl`
-3. Click "upload now"
-4. Wait for "Triples uploaded: 40"
+Expected response:
+```json
+{ "count" : 40 , "tripleCount" : 40 , "quadCount" : 0 }
+```
 
-### 7. Query the Data
-
-Via curl:
+### 6. Query the Data
 
 ```bash
 curl -s -u admin:<PASSWORD> "http://localhost:3030/ds-rw/sparql" \
@@ -105,8 +103,6 @@ WHERE {
 }
 ORDER BY ?name'
 ```
-
-Or via UI: `http://admin:<PASSWORD>@localhost:3030/#/dataset/ds-rw/query`
 
 ## Expected Results
 
