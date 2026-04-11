@@ -1,8 +1,21 @@
-# Fuseki Setup Plan
+# Fuseki Setup - Reproducible Guide
+
+This guide documents the exact steps to set up a Fuseki instance with Simpsons family RDF data.
 
 ## Prerequisites
 - Docker installed and running
 - Empty working directory
+
+## Quick Start
+
+```bash
+# Extract password automatically
+export FUSEKI_PASSWORD=$(docker logs fuseki 2>&1 | grep "admin=" | cut -d= -f2)
+```
+
+Then use `$FUSEKI_PASSWORD` in all subsequent curl commands.
+
+---
 
 ## Steps
 
@@ -21,7 +34,10 @@ docker logs fuseki 2>&1 | grep "admin="
 
 Output will show: `admin=<random-password>`
 
-Note: Replace `<PASSWORD>` in subsequent commands with the actual password.
+Set the password for subsequent commands:
+```bash
+export FUSEKI_PASSWORD=$(docker logs fuseki 2>&1 | grep "admin=" | cut -d= -f2)
+```
 
 ### 3. Create RDF Data File
 
@@ -71,7 +87,7 @@ Create `simpsons.ttl`:
 ### 4. Create Read-Write Dataset via API
 
 ```bash
-curl -s -u admin:<PASSWORD> -X POST "http://localhost:3030/$/datasets?dbType=tdb2&dbName=ds-rw"
+curl -s -u admin:$FUSEKI_PASSWORD -X POST "http://localhost:3030/$/datasets?dbType=tdb2&dbName=ds-rw"
 ```
 
 This creates a TDB2 dataset named `ds-rw` with all default services (read/write graph store, SPARQL query/update).
@@ -79,7 +95,7 @@ This creates a TDB2 dataset named `ds-rw` with all default services (read/write 
 ### 5. Upload Data
 
 ```bash
-curl -s -u admin:<PASSWORD> -X POST "http://localhost:3030/ds-rw/data" \
+curl -s -u admin:$FUSEKI_PASSWORD -X POST "http://localhost:3030/ds-rw/data" \
   --form "file=@simpsons.ttl"
 ```
 
@@ -91,7 +107,7 @@ Expected response:
 ### 6. Query the Data
 
 ```bash
-curl -s -u admin:<PASSWORD> "http://localhost:3030/ds-rw/sparql" \
+curl -s -u admin:$FUSEKI_PASSWORD "http://localhost:3030/ds-rw/sparql" \
   --data-urlencode 'query=PREFIX foaf: <http://xmlns.com/foaf/0.1/>
 PREFIX family: <http://example.org/family#>
 
@@ -104,7 +120,7 @@ WHERE {
 ORDER BY ?name'
 ```
 
-## Expected Results
+## Expected Results (Step 6)
 
 Query returns 5 persons:
 - Bart Simpson (age 10)
@@ -253,7 +269,7 @@ Create `extended-family.ttl`:
 ### 8. Upload Extended Family Data
 
 ```bash
-curl -s -u admin:<PASSWORD> -X POST "http://localhost:3030/ds-rw/data" \
+curl -s -u admin:$FUSEKI_PASSWORD -X POST "http://localhost:3030/ds-rw/data" \
   --form "file=@extended-family.ttl"
 ```
 
@@ -262,7 +278,7 @@ Expected response:
 { "count" : 114 , "tripleCount" : 114 , "quadCount" : 0 }
 ```
 
-Total triples: 154
+Total triples: 154 (40 + 114)
 
 ### 9. Audit the Graph
 
@@ -270,25 +286,33 @@ Check for data inconsistencies:
 
 ```bash
 # Check for missing parent relationships
-curl -s -u admin:<PASSWORD> "http://localhost:3030/ds-rw/sparql" \
+curl -s -u admin:$FUSEKI_PASSWORD "http://localhost:3030/ds-rw/sparql" \
   --data-urlencode 'query=PREFIX family: <http://example.org/family#>
 SELECT ?parent ?child
 WHERE {
   ?parent family:parentOf ?child .
   FILTER NOT EXISTS { ?child family:parent ?parent }
 }'
+```
 
+Expected: Returns 2 rows (grandpa→homer, jacqueline→marge missing reciprocals)
+
+```bash
 # Check for non-reciprocal spouse relationships
-curl -s -u admin:<PASSWORD> "http://localhost:3030/ds-rw/sparql" \
+curl -s -u admin:$FUSEKI_PASSWORD "http://localhost:3030/ds-rw/sparql" \
   --data-urlencode 'query=PREFIX family: <http://example.org/family#>
 SELECT ?person1 ?person2
 WHERE {
   ?person1 family:spouse ?person2 .
   FILTER NOT EXISTS { ?person2 family:spouse ?person1 }
 }'
+```
 
+Expected: Empty results (all spouse relationships are reciprocal)
+
+```bash
 # Check for non-reciprocal sibling relationships
-curl -s -u admin:<PASSWORD> "http://localhost:3030/ds-rw/sparql" \
+curl -s -u admin:$FUSEKI_PASSWORD "http://localhost:3030/ds-rw/sparql" \
   --data-urlencode 'query=PREFIX family: <http://example.org/family#>
 SELECT ?person1 ?person2
 WHERE {
@@ -296,6 +320,8 @@ WHERE {
   FILTER NOT EXISTS { ?person2 family:sibling ?person1 }
 }'
 ```
+
+Expected: Returns 2 rows (patty→marge, SELMA→marge missing reciprocals)
 
 ### 10. Apply Corrections
 
@@ -320,47 +346,53 @@ Create `corrections.ttl`:
 Upload corrections:
 
 ```bash
-curl -s -u admin:<PASSWORD> -X POST "http://localhost:3030/ds-rw/data" \
+curl -s -u admin:$FUSEKI_PASSWORD -X POST "http://localhost:3030/ds-rw/data" \
   --form "file=@corrections.ttl"
 ```
 
 Expected response:
 ```json
-{ "count" : 7 , "tripleCount" : 7 , "quadCount" : 0 }
+{ "count" : 5 , "tripleCount" : 5 , "quadCount" : 0 }
 ```
 
 ### 11. Verify Corrections
 
 ```bash
 # Verify all parent relationships are consistent (should return empty)
-curl -s -u admin:<PASSWORD> "http://localhost:3030/ds-rw/sparql" \
+curl -s -u admin:$FUSEKI_PASSWORD "http://localhost:3030/ds-rw/sparql" \
   --data-urlencode 'query=PREFIX family: <http://example.org/family#>
 SELECT ?parent ?child
 WHERE {
   ?parent family:parentOf ?child .
   FILTER NOT EXISTS { ?child family:parent ?parent }
 }'
+```
 
+```bash
 # Verify all sibling relationships are reciprocal (should return empty)
-curl -s -u admin:<PASSWORD> "http://localhost:3030/ds-rw/sparql" \
+curl -s -u admin:$FUSEKI_PASSWORD "http://localhost:3030/ds-rw/sparql" \
   --data-urlencode 'query=PREFIX family: <http://example.org/family#>
 SELECT ?person1 ?person2
 WHERE {
   ?person1 family:sibling ?person2 .
   FILTER NOT EXISTS { ?person2 family:sibling ?person1 }
 }'
+```
 
+```bash
 # Verify all neighborOf relationships are reciprocal (should return empty)
-curl -s -u admin:<PASSWORD> "http://localhost:3030/ds-rw/sparql" \
+curl -s -u admin:$FUSEKI_PASSWORD "http://localhost:3030/ds-rw/sparql" \
   --data-urlencode 'query=PREFIX family: <http://example.org/family#>
 SELECT ?person1 ?person2
 WHERE {
   ?person1 family:neighborOf ?person2 .
   FILTER NOT EXISTS { ?person2 family:neighborOf ?person1 }
 }'
+```
 
+```bash
 # Final count (should be 159 triples)
-curl -s -u admin:<PASSWORD> "http://localhost:3030/ds-rw/sparql" \
+curl -s -u admin:$FUSEKI_PASSWORD "http://localhost:3030/ds-rw/sparql" \
   --data-urlencode 'query=SELECT (COUNT(*) as ?totalTriples) WHERE { ?s ?p ?o }'
 ```
 
@@ -382,7 +414,7 @@ curl -s -u admin:<PASSWORD> "http://localhost:3030/ds-rw/sparql" \
 - Jacqueline Bouvier (Marge's mother)
 - Patty Bouvier (Marge's sister)
 - Selma Bouvier (Marge's sister)
-- Herbert Powell (Patty's ex-husband)
+- Herbert Powell (Patty's spouse)
 
 **Flanders Family**:
 - Ned Flanders (Homer's neighbor)
@@ -400,3 +432,24 @@ curl -s -u admin:<PASSWORD> "http://localhost:3030/ds-rw/sparql" \
 - Rod Leonard (age 14, Selma & Lenny's son)
 - Todd Leonard (age 12, Selma & Lenny's son)
 - Edna Carlson (age 6, Carl & Louise's daughter)
+
+---
+
+## Cleanup
+
+To reset and start over:
+
+```bash
+docker stop fuseki
+docker rm fuseki
+rm -f simpsons.ttl extended-family.ttl corrections.ttl
+```
+
+---
+
+## Version History
+
+- **v1**: Manual UI-based setup (not reproducible)
+- **v2**: API-based setup with `<PASSWORD>` placeholder
+- **v3**: Added extended family data, audit, and corrections steps
+- **v4 (current)**: Added automatic password extraction via `$FUSEKI_PASSWORD` variable
