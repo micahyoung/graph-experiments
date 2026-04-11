@@ -26,6 +26,8 @@
    ```
    test your changes by spinning up an Task providing it only these exact instructions: "implement the plan in PLAN.md"
    ```
+9. Commit changes to `PLAN.md`
+8. (optional) Introduce a new experimental change to the process in, then go to step 6
 
 ### Abstration steps
 
