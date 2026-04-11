@@ -452,4 +452,4 @@ rm -f simpsons.ttl extended-family.ttl corrections.ttl
 - **v1**: Manual UI-based setup (not reproducible)
 - **v2**: API-based setup with `<PASSWORD>` placeholder
 - **v3**: Added extended family data, audit, and corrections steps
-- **v4 (current)**: Added automatic password extraction via `$FUSEKI_PASSWORD` variable
+- **v4 (current)**: Automatic password extraction via `$FUSEKI_PASSWORD` variable (truly reproducible)
