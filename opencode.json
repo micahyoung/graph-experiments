@@ -1,0 +1,10 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "agent": {
+    "vision": {
+      "description": "Analyzes images, screenshots, and visual content",
+      "mode": "all",
+      "model": "unsloth-studio/qwen3.5-27b-vision"
+    }
+  }
+}
