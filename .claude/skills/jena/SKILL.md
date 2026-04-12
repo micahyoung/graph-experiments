@@ -18,7 +18,7 @@ This skill captures a repeatable workflow for building a small-to-medium RDF gra
 
 The workflow has four phases. Most extensions only exercise phases 2–3 repeatedly.
 
-1. **Bootstrap** *(optional — skip if Fuseki is already running)* — start a local Fuseki container, extract credentials, and create an empty dataset. Read `references/local-docker.md` only if you need to spin one up from scratch. If the user already has a Fuseki endpoint, just confirm `$FUSEKI_URL`, `$FUSEKI_CREDENTIALS`, and `$DATASET` and proceed to phase 2.
+1. **Bootstrap** *(optional — skip if Fuseki is already running)* — start a local Fuseki container, extract credentials, and create an empty dataset. Read `references/local-fuseki.md` only if you need to spin one up from scratch. If the user already has a Fuseki endpoint, just confirm `$FUSEKI_URL`, `$FUSEKI_CREDENTIALS`, and `$DATASET` and proceed to phase 2.
 2. **Load** — write a Turtle file, upload it, verify the reported triple count matches expectation.
 3. **Audit & correct** — run domain-specific invariant queries, generate a corrections file for any violations, upload it, re-run the audits until they come back empty.
 4. **Cleanup** — tear down the container and remove scratch files when the session is finished (only on request — do not tear down a running instance without confirmation, the user may still be exploring the graph).
@@ -31,7 +31,8 @@ Read these on demand — they are small and self-contained.
 
 | File | Read it when … |
 |------|----------------|
-| `references/local-docker.md` | *(optional)* You need to start, inspect, or tear down a local Fuseki container (specific Docker image, password extraction, lifecycle). Skip entirely if a Fuseki instance is already running — just set `$FUSEKI_URL` and `$FUSEKI_CREDENTIALS`. |
+| `references/local-fuseki.md` | *(optional)* You need to start, inspect, or tear down a local Fuseki container (specific Docker image, password extraction, lifecycle). Skip entirely if a Fuseki instance is already running — just set `$FUSEKI_URL` and `$FUSEKI_CREDENTIALS`. |
+| `references/local-graph-explorer.md` | *(optional)* You want to visually explore or browse the graph in a browser UI. Covers pulling the AWS Graph Explorer Docker image, connecting it to a running Fuseki instance, and tear down. |
 | `references/datasets.md` | You need to create / delete / list a dataset inside a running Fuseki (TDB2 and in-memory). |
 | `references/people.md` | The data you're loading models people and their relationships (family, social, organisational, fictional cast, etc.). This covers the Turtle authoring, upload, invariant audit, and correction loop in detail, and it is the reference most extensions need. |
 
