@@ -39,22 +39,63 @@ The container needs a moment to initialise. A short sleep is the most reliable w
 sleep 3
 ```
 
-## Connect to Fuseki
+## Connect to Fuseki (Programmatic)
 
-Graph Explorer connects to your RDF store via a connection configuration. Open the UI at `http://localhost:$GRAPH_EXPLORER_PORT/explorer` and configure the connection:
+Graph Explorer supports programmatic connection configuration via environment variables. This approach pre-configures the connection on startup, eliminating the need for manual UI configuration.
 
-1. Click "Add New Connection"
-2. Set **Query Language** to `SPARQL - RDF (Resource Description Framework)`
-3. Set **Public or Proxy Endpoint** to `$FUSEKI_URL/$DATASET`
-4. Click "Add Connection"
+### Environment Variable Approach
+
+For a direct SPARQL connection to Fuseki:
+
+```bash
+docker run -d -p $GRAPH_EXPLORER_PORT:80 \
+  --name graph-explorer \
+  --env PROXY_SERVER_HTTPS_CONNECTION=false \
+  --env GRAPH_EXP_HTTPS_CONNECTION=false \
+  --env PUBLIC_OR_PROXY_ENDPOINT=$FUSEKI_URL/$DATASET \
+  --env GRAPH_TYPE=sparql \
+  public.ecr.aws/neptune/graph-explorer
+```
+
+Key environment variables:
+- `PUBLIC_OR_PROXY_ENDPOINT` (required): The SPARQL endpoint URL (e.g., `http://localhost:3030/kennedy`)
+- `GRAPH_TYPE` (optional): Set to `sparql` for RDF/SPARQL endpoints. If not specified, multiple connections are created for all query languages.
+- `GRAPH_EXP_HTTPS_CONNECTION`: Set to `false` for HTTP connections
+- `PROXY_SERVER_HTTPS_CONNECTION`: Set to `false` to disable proxy HTTPS
+
+### Alternative: JSON Configuration
+
+For more complex configurations, create a `config.json` file:
+
+```json
+{
+  "PUBLIC_OR_PROXY_ENDPOINT": "http://localhost:3030/kennedy",
+  "GRAPH_TYPE": "sparql",
+  "GRAPH_EXP_HTTPS_CONNECTION": false,
+  "PROXY_SERVER_HTTPS_CONNECTION": false
+}
+```
+
+Then mount it into the container:
+
+```bash
+docker run -d -p $GRAPH_EXPLORER_PORT:80 \
+  --name graph-explorer \
+  -v /path/to/config.json:/graph-explorer/config.json \
+  public.ecr.aws/neptune/graph-explorer
+```
+
+See [AWS Graph Explorer default connection docs](https://github.com/aws/graph-explorer/blob/main/docs/references/default-connection.md) for all available options.
 
 ## Sanity check
 
-You can confirm the connection works by checking the synchronization status in the UI. A successful connection shows:
+Open the UI at `http://localhost:$GRAPH_EXPLORER_PORT/explorer`. A successful connection shows:
 
-- **Resources**: count of distinct subjects
-- **Predicates**: count of distinct predicates
-- **Last Synchronization**: timestamp
+- **Connection name** at the top (e.g., "Default Connection")
+- **Search panel** with resources from your dataset
+- **Resources count** in the search results header
+
+For SPARQL endpoints, you should see your RDF resources listed in the search panel.
 
 ## Stop and remove
 
@@ -69,4 +110,6 @@ This throws away any connection configurations stored in the container. If you n
 - **Port `$GRAPH_EXPLORER_PORT` must be free.** If the run fails with `port is already allocated`, either stop the conflicting container or set `GRAPH_EXPLORER_PORT` to a different value and re-run.
 - **HTTPS disabled by default for local use.** The environment variables `PROXY_SERVER_HTTPS_CONNECTION=false` and `GRAPH_EXP_HTTPS_CONNECTION=false` prevent certificate warnings. For production, remove these and configure proper TLS.
 - **SPARQL endpoint path.** Use the dataset path in the URL: `$FUSEKI_URL/$DATASET` not `$FUSEKI_URL/$DATASET/sparql`. Graph Explorer appends the appropriate endpoint suffix automatically.
-- **Authentication.** If your Fuseki instance requires authentication, the credentials are handled via the proxy server when "Using Proxy-Server" is enabled. For direct connections, Fuseki's CORS settings must allow the Graph Explorer origin.
+- **Authentication.** For Fuseki instances requiring authentication, you may need to configure the proxy server with `USING_PROXY_SERVER=true` and `GRAPH_CONNECTION_URL`. See the [default connection documentation](https://github.com/aws/graph-explorer/blob/main/docs/references/default-connection.md) for details.
+- **JSON vs environment variables.** If both a JSON config file and environment variables are provided, JSON takes precedence.
+- **Platform warning.** On Apple Silicon (arm64), you may see a platform mismatch warning since the image is built for amd64. This is harmless and the container runs fine via emulation.
