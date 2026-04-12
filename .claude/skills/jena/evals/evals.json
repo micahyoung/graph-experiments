@@ -1,0 +1,12 @@
+{
+  "skill_name": "jena",
+  "evals": [
+    {
+      "id": 1,
+      "name": "simpsons-three-stage-build",
+      "prompt": "Stand up a local Jena Fuseki instance and build up a Simpsons knowledge graph in three stages:\n\nStage 1 — core family: model the Simpson nuclear family (Homer, Marge, Bart, Lisa, Maggie) with name, age, job, and family relationships.\n\nStage 2 — extended family: add extended relatives (Abraham 'Abe' Simpson, Herb Powell, Jacqueline Bouvier, Patty Bouvier, Selma Bouvier) and wire them into the existing graph with the correct parent/parentOf and sibling relationships.\n\nStage 3 — celebrity guest stars: add 10 well-known celebrities who have made guest appearances on the Simpsons voicing themselves (i.e. the character on the show *is* that real person).\n\nValidate along the way and at the end, including final count",
+      "expected_output": "Three successful upload-and-audit cycles with all invariants clean after each one. The final state has the Simpson nuclear family, the extended family wired into them, and 10 real-world celebrity entities that voice themselves on the show, plus whatever corrections files were needed along the way. Final SELECT (COUNT(*)) ... reported.",
+      "files": []
+    }
+  ]
+}
