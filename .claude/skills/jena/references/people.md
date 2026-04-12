@@ -7,7 +7,7 @@ All commands below use three generic variables. Set them once for your session b
 ```bash
 FUSEKI_URL="<scheme://host:port>"       # e.g. from local-fuseki.md or provided by the user
 FUSEKI_CREDENTIALS="<user:password>"    # e.g. from local-fuseki.md or provided by the user
-DATASET="ds-rw"
+FUSEKI_DATASET="ds-rw"
 ```
 
 For a local Docker instance started via `references/local-fuseki.md`, substitute the host/port and credentials from that setup. For any other Fuseki, use whatever the user supplies.
@@ -56,7 +56,7 @@ Write your Turtle into a named file (conventionally `people.ttl`, `extended.ttl`
 
 ```bash
 curl -s -u $FUSEKI_CREDENTIALS \
-  -X POST "$FUSEKI_URL/$DATASET/data" \
+  -X POST "$FUSEKI_URL/$FUSEKI_DATASET/data" \
   --form "file=@people.ttl"
 ```
 
@@ -85,7 +85,7 @@ The pattern for every audit query is the same: *find the pairs where the relatio
 For a symmetric predicate `ex:REL`:
 
 ```bash
-curl -s -u $FUSEKI_CREDENTIALS "$FUSEKI_URL/$DATASET/sparql" \
+curl -s -u $FUSEKI_CREDENTIALS "$FUSEKI_URL/$FUSEKI_DATASET/sparql" \
   --data-urlencode 'query=PREFIX ex: <http://example.org/rel#>
 SELECT ?a ?b WHERE { ?a ex:REL ?b . FILTER NOT EXISTS { ?b ex:REL ?a } }'
 ```
@@ -98,12 +98,12 @@ For an inverse pair `ex:FORWARD` / `ex:INVERSE` you need **two** queries — one
 
 ```bash
 # Forward → inverse
-curl -s -u $FUSEKI_CREDENTIALS "$FUSEKI_URL/$DATASET/sparql" \
+curl -s -u $FUSEKI_CREDENTIALS "$FUSEKI_URL/$FUSEKI_DATASET/sparql" \
   --data-urlencode 'query=PREFIX ex: <http://example.org/rel#>
 SELECT ?a ?b WHERE { ?a ex:FORWARD ?b . FILTER NOT EXISTS { ?b ex:INVERSE ?a } }'
 
 # Inverse → forward
-curl -s -u $FUSEKI_CREDENTIALS "$FUSEKI_URL/$DATASET/sparql" \
+curl -s -u $FUSEKI_CREDENTIALS "$FUSEKI_URL/$FUSEKI_DATASET/sparql" \
   --data-urlencode 'query=PREFIX ex: <http://example.org/rel#>
 SELECT ?a ?b WHERE { ?a ex:INVERSE ?b . FILTER NOT EXISTS { ?b ex:FORWARD ?a } }'
 ```
@@ -138,7 +138,7 @@ Upload it with the same curl pattern:
 
 ```bash
 curl -s -u $FUSEKI_CREDENTIALS \
-  -X POST "$FUSEKI_URL/$DATASET/data" \
+  -X POST "$FUSEKI_URL/$FUSEKI_DATASET/data" \
   --form "file=@corrections-1.ttl"
 ```
 
@@ -157,7 +157,7 @@ Re-run the exact same audit queries from step 3. If any of them still has rows, 
 Once the audits are clean, report the total triple count so the user has a sanity check on the size of the graph:
 
 ```bash
-curl -s -u $FUSEKI_CREDENTIALS "$FUSEKI_URL/$DATASET/sparql" \
+curl -s -u $FUSEKI_CREDENTIALS "$FUSEKI_URL/$FUSEKI_DATASET/sparql" \
   --data-urlencode 'query=SELECT (COUNT(*) as ?n) WHERE { ?s ?p ?o }'
 ```
 

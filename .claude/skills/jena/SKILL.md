@@ -13,15 +13,17 @@ This skill captures a repeatable workflow for building a small-to-medium RDF gra
 - The user is describing data as entities-and-relationships and asks for it to be queryable
 - The user says things like "extend the graph with …" or "add … to the dataset"
 - The user wants to validate that a graph has certain structural properties (reciprocity, connectedness, coverage)
+- The user wants to configure or explore the graph visually in Graph Explorer
 
 ## Overall workflow
 
-The workflow has four phases. Most extensions only exercise phases 2–3 repeatedly.
+The workflow has five phases. Most extensions only exercise phases 2–3 repeatedly.
 
-1. **Bootstrap** *(optional — skip if Fuseki is already running)* — start a local Fuseki container, extract credentials, and create an empty dataset. Read `references/local-fuseki.md` only if you need to spin one up from scratch. If the user already has a Fuseki endpoint, just confirm `$FUSEKI_URL`, `$FUSEKI_CREDENTIALS`, and `$DATASET` and proceed to phase 2.
+1. **Bootstrap** *(optional — skip if Fuseki is already running)* — start a local Fuseki container, extract credentials, and create an empty dataset. Read `references/local-fuseki.md` only if you need to spin one up from scratch. If the user already has a Fuseki endpoint, just confirm `$FUSEKI_URL`, `$FUSEKI_CREDENTIALS`, and `$FUSEKI_DATASET` and proceed to phase 2.
 2. **Load** — write a Turtle file, upload it, verify the reported triple count matches expectation.
 3. **Audit & correct** — run domain-specific invariant queries, generate a corrections file for any violations, upload it, re-run the audits until they come back empty.
 4. **Cleanup** — tear down the container and remove scratch files when the session is finished (only on request — do not tear down a running instance without confirmation, the user may still be exploring the graph).
+5. **Explore** *(optional)* — configure Graph Explorer UI for visual exploration. Read `references/graph-explorer-ui.md` for Search, Namespaces, Predicate Styling, and Layout operations.
 
 Each phase has a reference file with the concrete commands. Read the reference at the moment you need it; you don't need to load everything up front.
 
@@ -33,6 +35,7 @@ Read these on demand — they are small and self-contained.
 |------|----------------|
 | `references/local-fuseki.md` | *(optional)* You need to start, inspect, or tear down a local Fuseki container (specific Docker image, password extraction, lifecycle). Skip entirely if a Fuseki instance is already running — just set `$FUSEKI_URL` and `$FUSEKI_CREDENTIALS`. |
 | `references/local-graph-explorer.md` | *(optional)* You want to visually explore or browse the graph in a browser UI. Covers pulling the AWS Graph Explorer Docker image, connecting it to a running Fuseki instance, and tear down. |
+| `references/graph-explorer-ui.md` | You need to interact with Graph Explorer's UI programmatically or manually. Covers Search, Namespaces, Predicate Styling, Expand, and Layout operations. |
 | `references/datasets.md` | You need to create / delete / list a dataset inside a running Fuseki (TDB2 and in-memory). |
 | `references/people.md` | The data you're loading models people and their relationships (family, social, organisational, fictional cast, etc.). This covers the Turtle authoring, upload, invariant audit, and correction loop in detail, and it is the reference most extensions need. |
 

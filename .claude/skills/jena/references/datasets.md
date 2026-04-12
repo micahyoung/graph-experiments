@@ -5,7 +5,7 @@ A Fuseki *dataset* is the top-level container for RDF data. Each Fuseki instance
 ```bash
 FUSEKI_URL="<scheme://host:port>"       # e.g. from local-fuseki.md or provided by the user
 FUSEKI_CREDENTIALS="<user:password>"    # e.g. from local-fuseki.md or provided by the user
-DATASET="my-dataset"
+FUSEKI_DATASET="my-dataset"
 ```
 
 For a local Docker instance started via `references/local-fuseki.md`, `$FUSEKI_URL` is the host/port from that setup and `$FUSEKI_CREDENTIALS` is `admin:<extracted-password>`. For any other Fuseki, substitute whatever the user supplies.
@@ -16,7 +16,7 @@ TDB2 is the right choice for anything you want to persist and query efficiently.
 
 ```bash
 curl -s -u $FUSEKI_CREDENTIALS \
-  -X POST "$FUSEKI_URL/\$/datasets?dbType=tdb2&dbName=$DATASET"
+  -X POST "$FUSEKI_URL/\$/datasets?dbType=tdb2&dbName=$FUSEKI_DATASET"
 ```
 
 A successful create returns an empty body and HTTP 200. Trying to create a dataset that already exists returns HTTP 409 `Conflict` — that's usually fine, it just means you already have one with that name.
@@ -29,7 +29,7 @@ For throwaway experiments where persistence across a container restart doesn't m
 
 ```bash
 curl -s -u $FUSEKI_CREDENTIALS \
-  -X POST "$FUSEKI_URL/\$/datasets?dbType=mem&dbName=$DATASET"
+  -X POST "$FUSEKI_URL/\$/datasets?dbType=mem&dbName=$FUSEKI_DATASET"
 ```
 
 Everything downstream (upload, SPARQL, correction cycle) works identically to TDB2. Default to TDB2 unless the user asks for memory explicitly.
@@ -46,7 +46,7 @@ Returns a JSON object with a `datasets` array. Each entry has `ds.name`, `ds.sta
 
 ```bash
 curl -s -u $FUSEKI_CREDENTIALS \
-  -X DELETE "$FUSEKI_URL/\$/datasets/$DATASET"
+  -X DELETE "$FUSEKI_URL/\$/datasets/$FUSEKI_DATASET"
 ```
 
 This is irreversible — it drops every triple in the dataset. Prefer creating a fresh dataset with a new name over deleting and recreating during a working session.
