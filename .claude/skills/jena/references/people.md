@@ -5,12 +5,12 @@ This reference covers the core workflow for building a graph of people who are c
 All commands below use three generic variables. Set them once for your session before running anything:
 
 ```bash
-FUSEKI_URL="<scheme://host:port>"       # e.g. from local-docker.md or provided by the user
-FUSEKI_CREDENTIALS="<user:password>"    # e.g. from local-docker.md or provided by the user
+FUSEKI_URL="<scheme://host:port>"       # e.g. from local-fuseki.md or provided by the user
+FUSEKI_CREDENTIALS="<user:password>"    # e.g. from local-fuseki.md or provided by the user
 DATASET="ds-rw"
 ```
 
-For a local Docker instance started via `references/local-docker.md`, substitute the host/port and credentials from that setup. For any other Fuseki, use whatever the user supplies.
+For a local Docker instance started via `references/local-fuseki.md`, substitute the host/port and credentials from that setup. For any other Fuseki, use whatever the user supplies.
 
 ---
 
