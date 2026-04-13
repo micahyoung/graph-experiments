@@ -33,14 +33,19 @@ export FUSEKI_PASSWORD=$(docker logs fuseki 2>&1 | grep "admin=" | cut -d= -f2)
 
 From here on, use `admin:$FUSEKI_PASSWORD` as the HTTP basic-auth credentials for every curl call against `http://localhost:3030/…`. Consider echoing the password once so the user can reach the UI at `http://localhost:3030` in a browser if they want to poke around manually.
 
-**If the grep returns nothing**, the container hasn't finished starting yet — wait another second or two and re-run the grep. Don't race ahead and try to authenticate, Fuseki will simply reject the request.
+## Other variables
+
+```bash
+export FUSEKI_URL="http://localhost:3030"            # if using default port
+export FUSEKI_CREDENTIALS="admin:$FUSEKI_PASSWORD"   # if using default username
+```
 
 ## Sanity check
 
 You can confirm the server is up and the credentials work by asking Fuseki for its list of datasets (it should be empty on a fresh container):
 
 ```bash
-curl -s -u admin:$FUSEKI_PASSWORD http://localhost:3030/$/datasets
+curl -s -u $FUSEKI_CREDENTIALS $FUSEKI_URL/$/datasets
 ```
 
 ## Stop and remove

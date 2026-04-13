@@ -5,16 +5,18 @@ This reference documents common Graph Explorer UI operations for exploring and c
 ## Prerequisites
 
 - Graph Explorer running and connected to a Fuseki dataset
-- `$GRAPH_EXPLORER_URI` environment variable set (e.g., `http://localhost:3031/explorer`)
-- Navigate to `$GRAPH_EXPLORER_URI`
+- `$GRAPH_EXPLORER_URL` environment variable set (e.g., `http://localhost:3031`)
+- Navigate to `$GRAPH_EXPLORER_URL/explorer`
 
 ---
 
-## Search Panel
+## Graph Navigation Tab
 
-The Search panel opens by default in the right sidebar.
+### Search Panel
 
-### Adding Results to Graph View
+The Search panel opens by default in the right sidebar. Up to 10 results shown by default but more can be added through the Data Table Navigation Tab.
+
+#### Adding Results to Graph View
 
 1. In the right sidebar, verify the **Search** tab is selected
 2. Under the **Filter** tab, review the results count (e.g., "N Items")
@@ -23,18 +25,18 @@ The Search panel opens by default in the right sidebar.
 4. To add individual items:
    - Click the **"Add node to view"** button next to each item
 
-### Expected Results
+#### Expected Results
 
 - Items appear in the Table View with neighbor counts
 - Graph View displays nodes for added items
 
 ---
 
-## Namespaces Panel
+### Namespaces Panel
 
 Configure custom namespaces for cleaner URI display (e.g., `foaf:Person` instead of full URIs).
 
-### Creating Custom Namespaces
+#### Creating Custom Namespaces
 
 1. Click the **Namespaces** tab in the right sidebar
 2. Click the **Custom** sub-tab
@@ -45,50 +47,50 @@ Configure custom namespaces for cleaner URI display (e.g., `foaf:Person` instead
 5. Click **Save**
 6. Repeat steps 3-5 for additional namespaces
 
-### Expected Results
+#### Expected Results
 
 - URIs in Table View and Graph View display as `prefix:local` format
 
 ---
 
-## Predicate Styling Panel
+### Predicate Styling Panel
 
 Configure readable labels for relationship predicates.
 
-### Editing Predicate Labels
+#### Editing Predicate Labels
 
 1. Click the **Predicate Styling** tab in the right sidebar
 2. For each predicate to style:
    - Click directly in the textbox next to the predicate URI
    - Type the desired display label (e.g., `Spouse`, `Parent`, `Related To`)
 
-### Expected Results
+#### Expected Results
 
 - Relationship edges in Graph View display custom labels instead of full URIs
 
 ---
 
-## Table View
+### Table View
 
 The Table View displays all resources currently in the graph.
 
-### Selecting an Item
+#### Selecting an Item
 
 1. Locate the item in the Table View
 2. Click on the **Resource Id** (e.g., `prefix:localName`) to select it
 
-### Expected Results
+#### Expected Results
 
 - Selected item is highlighted
 - Details panel updates to show the selected item's information
 
 ---
 
-## Details Panel
+### Details Panel
 
 View detailed information about a selected resource.
 
-### Viewing Item Info
+#### Viewing Item Info
 
 1. Select an item in the Table View (see above)
 2. Click the **Details** tab in the right sidebar (opens automatically on selection)
@@ -99,11 +101,11 @@ View detailed information about a selected resource.
 
 ---
 
-## Expand Panel
+### Expand Panel
 
 Expand relationships from a selected resource to reveal connected neighbors.
 
-### Expanding Relationships
+#### Expanding Relationships
 
 1. Select a resource in the Table View
 2. Click the **Expand** tab in the right sidebar
@@ -112,7 +114,7 @@ Expand relationships from a selected resource to reveal connected neighbors.
    - **Limit returned neighbors:** Toggle and set limit (default: 10)
 4. Click the **"Expand"** button
 
-### Expected Results
+#### Expected Results
 
 - Neighbors are added to the Graph View
 - Table View updates with new items and neighbor counts
@@ -120,17 +122,17 @@ Expand relationships from a selected resource to reveal connected neighbors.
 
 ---
 
-## Graph View
+### Graph View
 
 The main canvas displaying nodes and relationships.
 
-### Optimizing Layout
+#### Optimizing Layout
 
 1. Click **"Re-run Layout"** to reposition nodes with force-directed algorithm
 2. Click **"Zoom to Fit"** to center and scale the graph to viewport
 3. Repeat **"Re-run Layout"** if nodes remain clustered
 
-### Expected Results
+#### Expected Results
 
 - Nodes are spaced apart with better visibility
 - Graph is centered and scaled appropriately
@@ -138,11 +140,21 @@ The main canvas displaying nodes and relationships.
 
 ---
 
-## Common Workflow
+## Data Table Navigation Tab
+
+The full list of queryable fuseki items.
+
+### Adding items to the Table View
+
+Click "Send to Explorer" to add an item to the Table View
+
+---
+
+### Common Workflow
 
 A typical configuration sequence:
 
-1. **Search** → Add all items to graph
+1. **Search** → Add all items to graph (up to 10)
 2. **Namespaces** → Create custom prefixes
 3. **Predicate Styling** → Configure relationship labels
 4. **Table View** → Select a starting node

@@ -1,7 +1,7 @@
 Build and render a graph of the JKF family in these steps:
 
 1. Stand up local instances of Fuseki
-2. Build knowledge graph of:
+2. Create a dataset with a knowledge graph of:
     core family: model the JFK I nuclear family with name, birth dates, and family relationships.
 
     Validate along the way and at the end, including final count

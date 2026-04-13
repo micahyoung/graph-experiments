@@ -26,38 +26,7 @@ This image exposes the Graph Explorer UI internally on port `80`, mapped to `$GR
 
 ```bash
 docker pull public.ecr.aws/neptune/graph-explorer
-docker run -d -p $GRAPH_EXPLORER_PORT:80 \
-  --name graph-explorer \
-  --env PROXY_SERVER_HTTPS_CONNECTION=false \
-  --env GRAPH_EXP_HTTPS_CONNECTION=false \
-  public.ecr.aws/neptune/graph-explorer
-```
 
-The container needs a moment to initialise. A short sleep is the most reliable way to wait:
-
-```bash
-sleep 3
-```
-
-## Set Environment Variable
-
-For use with `references/graph-explorer-ui.md`, set the Graph Explorer URI:
-
-```bash
-export GRAPH_EXPLORER_URI="http://localhost:$GRAPH_EXPLORER_PORT/explorer"
-```
-
-Adjust the host/port if you mapped to a different address.
-
-## Connect to Fuseki (Programmatic)
-
-Graph Explorer supports programmatic connection configuration via environment variables. This approach pre-configures the connection on startup, eliminating the need for manual UI configuration.
-
-### Environment Variable Approach
-
-For a direct SPARQL connection to Fuseki:
-
-```bash
 docker run -d -p $GRAPH_EXPLORER_PORT:80 \
   --name graph-explorer \
   --env PROXY_SERVER_HTTPS_CONNECTION=false \
@@ -67,39 +36,32 @@ docker run -d -p $GRAPH_EXPLORER_PORT:80 \
   public.ecr.aws/neptune/graph-explorer
 ```
 
-Key environment variables:
+The container needs a moment to initialise. A short sleep is the most reliable way to wait:
+
+```bash
+sleep 3
+```
+
+### Key environment variables
+
 - `PUBLIC_OR_PROXY_ENDPOINT` (required): The SPARQL endpoint URL (e.g., `http://localhost:3030/kennedy`)
 - `GRAPH_TYPE` (optional): Set to `sparql` for RDF/SPARQL endpoints. If not specified, multiple connections are created for all query languages.
 - `GRAPH_EXP_HTTPS_CONNECTION`: Set to `false` for HTTP connections
 - `PROXY_SERVER_HTTPS_CONNECTION`: Set to `false` to disable proxy HTTPS
 
-### Alternative: JSON Configuration
+## Save Graph Explorer URL as Environment Variable
 
-For more complex configurations, create a `config.json` file:
-
-```json
-{
-  "PUBLIC_OR_PROXY_ENDPOINT": "http://localhost:3030/kennedy",
-  "GRAPH_TYPE": "sparql",
-  "GRAPH_EXP_HTTPS_CONNECTION": false,
-  "PROXY_SERVER_HTTPS_CONNECTION": false
-}
-```
-
-Then mount it into the container:
+For use with `references/graph-explorer-ui.md`, set the Graph Explorer URL:
 
 ```bash
-docker run -d -p $GRAPH_EXPLORER_PORT:80 \
-  --name graph-explorer \
-  -v /path/to/config.json:/graph-explorer/config.json \
-  public.ecr.aws/neptune/graph-explorer
+export GRAPH_EXPLORER_URL="http://localhost:$GRAPH_EXPLORER_PORT"
 ```
 
-See [AWS Graph Explorer default connection docs](https://github.com/aws/graph-explorer/blob/main/docs/references/default-connection.md) for all available options.
+Adjust the host/port if you mapped to a different address.
 
 ## Sanity check
 
-Open the UI at `$GRAPH_EXPLORER_URI`. A successful connection shows:
+Open the UI at `$GRAPH_EXPLORER_URL/explorer`. A successful connection shows:
 
 - **Connection name** at the top (e.g., "Default Connection")
 - **Search panel** with resources from your dataset
