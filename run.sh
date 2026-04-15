@@ -72,4 +72,4 @@ EOF
 rm -rf ./docker-opencode.json
 
 PROMPT=$@
-docker run --rm --privileged -w /workspace -v $PWD:workspace -v $HOME/.docker/run/docker.sock:/var/run/docker.sock graph-experiments opencode run --model unsloth/qwen3.5-27b-vision "$PROMPT"
+docker run --rm --privileged -w /workspace -v $PWD:/workspace -v $HOME/.docker/run/docker.sock:/var/run/docker.sock graph-experiments opencode run --model unsloth/qwen3.5-27b-vision --thinking "$PROMPT"
