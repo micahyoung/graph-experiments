@@ -4,8 +4,22 @@
     {
       "id": 1,
       "name": "simpsons-three-stage-build",
-      "prompt": "Stand up a local Jena Fuseki instance and build up a Simpsons knowledge graph in three stages:\n\nStage 1 — core family: model the Simpson nuclear family (Homer, Marge, Bart, Lisa, Maggie) with name, age, job, and family relationships.\n\nStage 2 — extended family: add extended relatives (Abraham 'Abe' Simpson, Herb Powell, Jacqueline Bouvier, Patty Bouvier, Selma Bouvier) and wire them into the existing graph with the correct parent/parentOf and sibling relationships.\n\nStage 3 — celebrity guest stars: add 10 well-known celebrities who have made guest appearances on the Simpsons voicing themselves (i.e. the character on the show *is* that real person).\n\nValidate along the way and at the end, including final count",
+      "prompt": "Stand up a local Jena Fuseki instance and build up a Simpsons knowledge graph in three stages:\n\nStage 1 — core family: model the Simpson nuclear family (Homer, Marge, Bart, Lisa, Maggie) with name, age, job, and family relationships.\n\nStage 2 — extended family: add extended relatives (Abraham 'Abe' Simpson, Herb Powell, Jacqueline Bouvier, Patty Bouvier, Selma Bouvier) and wire them into the existing graph with the correct parent/parentOf and sibling relationships.\n\nStage 3 — celebrity guest stars: add 10 well-known celebrities who have made guest appearances on the Simpsons voicing themselves (i.e. the character on the show *is* that real person).\n\nValidate along the way and at the end, including final count. Cleanup fuseki and graph-explorer instances and files after.",
       "expected_output": "Three successful upload-and-audit cycles with all invariants clean after each one. The final state has the Simpson nuclear family, the extended family wired into them, and 10 real-world celebrity entities that voice themselves on the show, plus whatever corrections files were needed along the way. Final SELECT (COUNT(*)) ... reported.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "simpsons-fuseki-graph-explorer",
+      "prompt": "Build and render a graph of the Simpsons family in these steps:\n\n1. Stand up local instances of Fuseki\n2. Create a dataset with a knowledge graph of:\n   - core family: model the Simpsons nuclear family with name, ages, jobs, and family relationships\n   - extended family: immediate relatives, their children and partners\n3. Stand up a graph-explorer configured to the fuseki simpsons dataset\n4. Add only homer to Graph View, configure namespaces, add relationship predicate labels, progressively expand relationships to each of the nuclear family members, and finally optimize the graph view layout. Cleanup fuseki and graph-explorer instances and files after.",
+      "expected_output": "A running Fuseki instance with a Simpsons dataset loaded (nuclear + extended family with correct relationships), a graph-explorer instance connected to it, and a Graph View showing the nuclear family progressively expanded from Homer with namespace config, predicate labels, and an optimized layout.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "jfk-fuseki-graph-explorer",
+      "prompt": "Build and render a graph of the JFK family in these steps:\n\n1. Stand up local instances of Fuseki\n2. Create a dataset with a knowledge graph of:\n    core family: model the JFK I nuclear family with name, birth dates, and family relationships.\n3. Stand up a graph-explorer configured to the fuseki kennedy dataset\n4. Add all members to Graph View, configure namespaces, add relationship predicate labels, expand all relationships, and optimize the graph view layout. Cleanup fuseki and graph-explorer instances and files after.",
+      "expected_output": "A running Fuseki instance with a Kennedy dataset loaded (JFK's nuclear family with names, birth dates, and family relationships), a graph-explorer instance connected to it, and a Graph View showing all members with namespace config, predicate labels, all relationships expanded, and an optimized layout.",
       "files": []
     }
   ]
